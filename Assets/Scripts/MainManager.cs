@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using TMPro;
+using System.IO;
+using System;
 
 public class MainManager : MonoBehaviour
 {
@@ -11,10 +14,17 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
+    public Text BestText;
     public GameObject GameOverText;
-    
+
+    public string DisplayUserName;
+    public string displayHighScore;
+    public string DisplayHighScoreUserName;
+    public int checkHighScore;
+    public string checkPoints;
+
     private bool m_Started = false;
-    private int m_Points;
+    private int m_Points = 0;
     
     private bool m_GameOver = false;
 
@@ -36,6 +46,9 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+        DisplayUserName = GameManager.Instance.userNameInput;
+        LoadHighScore();
+        AddPoint(0);
     }
 
     private void Update()
@@ -45,7 +58,7 @@ public class MainManager : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 m_Started = true;
-                float randomDirection = Random.Range(-1.0f, 1.0f);
+                float randomDirection = UnityEngine.Random.Range(-1.0f, 1.0f);
                 Vector3 forceDir = new Vector3(randomDirection, 1, 0);
                 forceDir.Normalize();
 
@@ -62,15 +75,82 @@ public class MainManager : MonoBehaviour
         }
     }
 
+    [System.Serializable]
+    class SaveData
+    {
+        public string displayHighScore;
+        public string DisplayUserName;
+        public string DisplayHighScoreUserName;
+    }
+
     void AddPoint(int point)
     {
         m_Points += point;
-        ScoreText.text = $"Score : {m_Points}";
+        ScoreText.text = DisplayUserName + "'s Score : " + m_Points;
     }
 
     public void GameOver()
     {
+        CheckIfNewHighScore();
         m_GameOver = true;
         GameOverText.SetActive(true);
     }
+
+    public void CheckIfNewHighScore()
+    {
+        string checkPoints = m_Points.ToString();
+        int checkHighScore = Int32.Parse(displayHighScore);
+        Debug.Log("HighScore Checked");
+
+        if (m_Points > checkHighScore || checkHighScore == 0)
+        {
+            displayHighScore = checkPoints;
+            DisplayHighScoreUserName = DisplayUserName;
+            SaveHighScore();
+            BestText.text = "High Score: " + DisplayHighScoreUserName + " : " + displayHighScore;
+        }
+    }
+
+    public void SaveHighScore()
+    {
+        SaveData data = new SaveData();
+        data.displayHighScore = displayHighScore;
+        data.DisplayHighScoreUserName = DisplayHighScoreUserName;
+
+        string json = JsonUtility.ToJson(data);
+
+        File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
+        Debug.Log("HighScore Saved");
+    }
+
+    public void LoadHighScore()
+    {
+        string path = Application.persistentDataPath + "/savefile.json";
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+
+            DisplayHighScoreUserName = data.DisplayHighScoreUserName;
+            displayHighScore = data.displayHighScore;
+            Debug.Log("HighScore Loaded");
+        }
+        else
+        {
+            Debug.Log("HighScore Defaulted");
+            DisplayHighScoreUserName = "None";
+            displayHighScore = "0";
+        }
+        BestText.text = "High Score: " + DisplayHighScoreUserName + " : " + displayHighScore;
+    }
+
+    /*public void SaveHighScoreUserName()
+    {
+        SaveData data = new SaveData();
+        data.DisplayUserName = DisplayUserName;
+
+        string json = JsonUtility.ToJson(data);
+
+        File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
+    }*/
 }
